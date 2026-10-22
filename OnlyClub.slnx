@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="OnlyClub.Adapters/OnlyClub.Adapters.csproj" />
+  <Project Path="OnlyClub.Application/OnlyClub.Application.csproj" />
+  <Project Path="OnlyClub.Core/OnlyClub.Core.csproj" />
+  <Project Path="OnlyClub.Infrastructure/OnlyClub.Infrastructure.csproj" />
+  <Project Path="OnlyClub/OnlyClub.API.csproj" />
+</Solution>

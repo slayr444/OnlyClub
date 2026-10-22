@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      # Строка подключения к БД внутри docker-сети (Host=db, где db - имя сервиса)
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=OnlyClubDb;Username=postgres;Password=postgres
+      # Секрет для QR (обязательно >= 32 символов, иначе HmacQrSigner упадет)
+      - Qr__Secret=super-secret-qr-key-for-hmac-sha256-at-least-32-bytes-long!
+      # Разрешаем тестовый провайдер оплаты
+      - Payments__AllowTestProvider=true
+      # Если токен пустой, TelegramBot будет просто писать сообщения в логи
+      - Telegram__BotToken= 
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=OnlyClubDb
+    ports:
+      - "5432:5432" # Пробрасываем порт, чтобы можно было подключиться из Rider/VS/PgAdmin
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OnlyClub.Application\OnlyClub.Application.csproj" />
+    <ProjectReference Include="..\OnlyClub.Core\OnlyClub.Core.csproj" />
+    <ProjectReference Include="..\OnlyClub.Infrastructure\OnlyClub.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

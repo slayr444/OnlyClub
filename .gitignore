@@ -1,0 +1,167 @@
+## ===== Visual Studio / Build artifacts =====
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ll]og/
+[Ll]ogs/
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.sln.docstates
+*.VC.db
+*.VC.VC.opendb
+
+## Visual Studio cache/options directory
+.vs/
+
+## ReSharper / Rider
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+.idea/
+
+## NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## MSBuild / publish
+*.pubxml
+*.pubxml.user
+*.publishproj
+PublishProfiles/
+*.azurePubxml
+**/Properties/PublishProfiles/*
+
+## Test results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+*.VisualState.xml
+
+## Rider / VS Code
+.vscode/
+*.DotSettings
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## ===== ASP.NET Core / .NET =====
+*.cache
+*.ilk
+*.meta
+*.obj
+*.pch
+*.pdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+## ASP.NET scaffolding
+ScaffoldingReadMe.txt
+node_modules/
+wwwroot/dist/
+wwwroot/lib/
+
+## ===== Configuration / Secrets =====
+# App settings with potential secrets (keep only templates in repo)
+appsettings.json
+appsettings.*.json
+!appsettings.json.example
+!appsettings.*.sample
+!appsettings.Development.json.example
+
+# User secrets (ASP.NET Core Secret Manager)
+secrets.json
+**/secrets.json
+
+# Environment files
+.env
+.env.*
+!.env.example
+*.env.local
+
+## ===== Database =====
+*.mdf
+*.ldf
+*.ndf
+*.sdf
+*.db
+*.db3
+*.sqlite
+*.sqlite3
+*.bak
+*.dacpac
+*.sql.bak
+Database/*.mdf
+Database/*.ldf
+App_Data/*.mdf
+App_Data/*.ldf
+
+## EF Core migrations snapshots you may not want to ship (uncomment if desired)
+# Migrations/
+
+## ===== Security / Certificates / Keys =====
+*.pfx
+*.p12
+*.key
+*.pem
+*.crt
+*.cer
+*.der
+*.jks
+*.keystore
+*.snk
+id_rsa
+id_rsa.pub
+id_dsa
+*.ppk
+
+## Cloud credentials
+*.azureauth
+*credentials*.json
+!*credentials*.sample.json
+.aws/
+azure-pipelines-secrets.yml
+
+## ASP.NET Core Data Protection keys
+*-keys/
+DataProtection-Keys/
+
+## Certificates folder
+certs/
+certificates/
+
+## ===== Misc =====
+*.swp
+*.bak
+*.orig
+*~
+.env.backup
