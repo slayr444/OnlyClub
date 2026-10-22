@@ -5,21 +5,21 @@ WORKDIR /src
 
 # Копируем ТОЛЬКО файлы проектов (.csproj), чтобы скачать пакеты.
 # Это кэшируется, и при изменении кода восстановление не будет запускаться заново.
-COPY ["OnlyClub.API/OnlyClub.API.csproj", "OnlyClub.API/"]
+COPY ["OnlyClub/OnlyClub.csproj", "OnlyClub/"]
 COPY ["OnlyClub.Application/OnlyClub.Application.csproj", "OnlyClub.Application/"]
 COPY ["OnlyClub.Core/OnlyClub.Core.csproj", "OnlyClub.Core/"]
 COPY ["OnlyClub.Infrastructure/OnlyClub.Infrastructure.csproj", "OnlyClub.Infrastructure/"]
 COPY ["OnlyClub.Adapters/OnlyClub.Adapters.csproj", "OnlyClub.Adapters/"]
 
 # Восстанавливаем зависимости
-RUN dotnet restore "OnlyClub.API/OnlyClub.API.csproj"
+RUN dotnet restore "OnlyClub/OnlyClub.csproj"
 
 # Копируем весь исходный код
 COPY . .
 
 # Собираем релизную версию
-WORKDIR "/src/OnlyClub.API"
-RUN dotnet publish "OnlyClub.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
+WORKDIR "/src/OnlyClub"
+RUN dotnet publish "OnlyClub.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 
 # --- Этап 2: Запуск (Runtime) ---
@@ -33,5 +33,5 @@ EXPOSE 8080
 # Копируем собранные файлы из первого этапа
 COPY --from=build /app/publish .
 
-# Запускаем приложение
-ENTRYPOINT ["dotnet", "OnlyClub.API.dll"]
+# Запускаем приложение (имя dll-файла тоже меняется на OnlyClub.dll)
+ENTRYPOINT ["dotnet", "OnlyClub.dll"]
