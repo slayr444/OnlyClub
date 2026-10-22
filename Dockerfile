@@ -1,37 +1,30 @@
 # --- Этап 1: Сборка (Build) ---
-# Используем официальный SDK. Если у тебя .NET 8, замени 10.0 на 8.0
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# Копируем ТОЛЬКО файлы проектов (.csproj), чтобы скачать пакеты.
-# Это кэшируется, и при изменении кода восстановление не будет запускаться заново.
-COPY ["OnlyClub/OnlyClub.csproj", "OnlyClub/"]
-COPY ["OnlyClub.Application/OnlyClub.Application.csproj", "OnlyClub.Application/"]
-COPY ["OnlyClub.Core/OnlyClub.Core.csproj", "OnlyClub.Core/"]
-COPY ["OnlyClub.Infrastructure/OnlyClub.Infrastructure.csproj", "OnlyClub.Infrastructure/"]
-COPY ["OnlyClub.Adapters/OnlyClub.Adapters.csproj", "OnlyClub.Adapters/"]
-
-# Восстанавливаем зависимости
-RUN dotnet restore "OnlyClub/OnlyClub.csproj"
-
-# Копируем весь исходный код
+# Копируем вообще всё (благодаря .dockerignore мусор вроде bin/obj и .git не попадет)
 COPY . .
 
-# Собираем релизную версию
-WORKDIR "/src/OnlyClub"
-RUN dotnet publish "OnlyClub.csproj" -c Release -o /app/publish /p:UseAppHost=false
+# Находим главный проект (Web API) и публикуем его.
+# Скрипт ищет все .csproj, игнорирует библиотеки и берет первый попавшийся основной проект.
+RUN PROJECT_FILE=$(find . -name "*.csproj" -not -path "*/OnlyClub.Application/*" -not -path "*/OnlyClub.Core/*" -not -path "*/OnlyClub.Infrastructure/*" -not -path "*/OnlyClub.Adapters/*" | head -n 1) && \
+    echo "==================================================" && \
+    echo "СБОРКА ПРОЕКТА: $PROJECT_FILE" && \
+    echo "==================================================" && \
+    dotnet publish "$PROJECT_FILE" -c Release -o /app/publish /p:UseAppHost=false
 
 
 # --- Этап 2: Запуск (Runtime) ---
-# Используем облегченный образ ASP.NET Core Runtime (там нет компилятора, только среда запуска)
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
-# Открываем порт 8080 (стандартный для .NET 8+)
 EXPOSE 8080
 
-# Копируем собранные файлы из первого этапа
+# Копируем собранные файлы
 COPY --from=build /app/publish .
 
-# Запускаем приложение (имя dll-файла тоже меняется на OnlyClub.dll)
+# Запускаем приложение.
+# ВАЖНО: Имя dll-файла берется из названия проекта. Если вы переименовали OnlyClub.API в OnlyClub, 
+# то файл называется OnlyClub.dll. Если при запуске будет ошибка "dll not found", 
+# замените строку ниже на "OnlyClub.API.dll"
 ENTRYPOINT ["dotnet", "OnlyClub.dll"]
