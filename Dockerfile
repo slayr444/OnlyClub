@@ -23,8 +23,4 @@ EXPOSE 8080
 # Копируем собранные файлы
 COPY --from=build /app/publish .
 
-# Запускаем приложение.
-# ВАЖНО: Имя dll-файла берется из названия проекта. Если вы переименовали OnlyClub.API в OnlyClub, 
-# то файл называется OnlyClub.dll. Если при запуске будет ошибка "dll not found", 
-# замените строку ниже на "OnlyClub.API.dll"
-ENTRYPOINT ["dotnet", "OnlyClub.dll"]
+ENTRYPOINT ["dotnet", "OnlyClub.API.dll"]
