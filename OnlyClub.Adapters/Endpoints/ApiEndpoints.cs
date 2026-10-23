@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
-using OnlyClub.Application.Contract.Admin;   
+using OnlyClub.Application.Contract.Admin;
 using OnlyClub.Application.Contract.Bookings;
 using OnlyClub.Application.Contract.Events;
 using OnlyClub.Application.Contract.GuestList;
@@ -112,6 +112,13 @@ public static class ApiEndpoints
         {
             var token = await svc.GetQrAsync(id, ct);
             return Results.Ok(new { qr = token });
+        });
+
+        guestApi.MapPost("/guestlist/{id:guid}/cancel", async (Guid id, ClaimsPrincipal user, [FromServices] GuestListService svc, CancellationToken ct) =>
+        {
+            var guestId = Guid.Parse(user.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            await svc.CancelAsync(id, guestId, ct);
+            return Results.Ok(new { message = "Заявка отменена" });
         });
 
         api.MapPost("/webhooks/payments", async ([FromBody] PaymentWebhookRequest req, [FromServices] BookingService svc, CancellationToken ct) =>

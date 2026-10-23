@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { Tabs, Toast } from './ui'
 import { Home, EventScreen, Booking, Bookings, GuestList, Profile } from './screens'
 
@@ -7,6 +7,13 @@ export default function App() {
     const [ev, setEv] = useState(null)
     const [bk, setBk] = useState(null)
     const [msg, setMsg] = useState('')
+
+    const [theme, setTheme] = useState(localStorage.getItem('app-theme') || 'theme-1')
+
+    useEffect(() => {
+        document.body.className = theme
+        localStorage.setItem('app-theme', theme)
+    }, [theme])
 
     const toast = useCallback(t => {
         setMsg(t)
@@ -20,9 +27,9 @@ export default function App() {
         : ev
             ? <EventScreen e={ev} back={() => setEv(null)} toast={toast} onBook={setBk} />
             : tab === 'home' ? <Home open={setEv} />
-                : tab === 'list' ? <GuestList />
+                : tab === 'list' ? <GuestList toast={toast} />
                     : tab === 'tick' ? <Bookings open={setBk} toast={toast} />
-                        : <Profile />
+                        : <Profile theme={theme} setTheme={setTheme} />    
 
     const key = bk ? 'b' + bk.id + bk.status : ev ? 'e' + ev.id : tab
 

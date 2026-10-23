@@ -40,6 +40,7 @@ export const joinGuestList = (eventId, name, age, parentEntryId = null) =>
 
 export const getMyGuestList = () => call('/guestlist/my');
 export const getGuestListQr = (entryId) => call(`/guestlist/${entryId}/qr`);
+export const cancelGuestListEntry = (entryId) => call(`/guestlist/${entryId}/cancel`, { method: 'POST' });
 
 export const getMyBookings = () => call('/bookings/my');
 

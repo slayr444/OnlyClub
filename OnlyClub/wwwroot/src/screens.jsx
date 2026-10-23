@@ -71,6 +71,11 @@ export function EventScreen({ e, back, onBook, toast }) {
             toast(`Вход только с ${e.minAge} лет!`)
             return
         }
+        if (+age > 60) {
+            note('error')
+            toast('Максимальный возраст для входа — 60 лет')
+            return
+        }
 
         setBusy(true)
         try {
@@ -80,7 +85,7 @@ export function EventScreen({ e, back, onBook, toast }) {
             setGl(false)
         } catch (x) {
             note('error')
-            toast(x.message)           
+            toast(x.message)
         }
         setBusy(false)
     }
@@ -141,19 +146,23 @@ export function EventScreen({ e, back, onBook, toast }) {
             {gl && (
                 <Sheet onClose={() => setGl(false)}>
                     <h2>Гостевой список</h2>
-                    <div className="sub">Минимальный возраст — {e.minAge}</div>
+                    <div className="sub">Возраст: от {e.minAge} до 60 лет</div>
                     <input className="field" placeholder="Имя" value={name} onChange={x => setName(x.target.value)} />
                     <input className="field" placeholder="Возраст" inputMode="numeric" value={age} onChange={x => setAge(x.target.value.replace(/\D/g, ''))} />
 
-                    {       }
                     {age && +age < e.minAge && (
                         <div className="sub" style={{ color: 'var(--bad)', marginTop: 8, textAlign: 'center' }}>
                             Вход только с {e.minAge} лет
                         </div>
                     )}
+                    {age && +age > 60 && (
+                        <div className="sub" style={{ color: 'var(--bad)', marginTop: 8, textAlign: 'center' }}>
+                            Вход до 60 лет
+                        </div>
+                    )}
 
                     <div style={{ marginTop: 16 }}>
-                        <Btn busy={busy} dis={!name || !age || +age < e.minAge} onClick={reg}>Записаться</Btn>
+                        <Btn busy={busy} dis={!name || !age || +age < e.minAge || +age > 60} onClick={reg}>Записаться</Btn>
                     </div>
                 </Sheet>
             )}
@@ -302,17 +311,33 @@ export function Bookings({ open, toast }) {
     )
 }
 
-export function GuestList() {
+export function GuestList({ toast }) {
     const [l, setL] = useState(null)
     const [qr, setQr] = useState(null)
-    useEffect(() => { call('/guestlist/my').then(setL).catch(() => setL([])) }, [])
+    const [cx, setCx] = useState(null)
+
+    const load = () => call('/guestlist/my').then(setL).catch(() => setL([]))
+    useEffect(() => { load() }, [])
 
     const show = async e => {
         hap()
         try {
             const r = await call(`/guestlist/${e.id}/qr`)
-            setQr({ name: e.name, token: typeof r === 'string' ? r : r.qr || r.token })
+            setQr({ id: e.id, name: e.name, token: typeof r === 'string' ? r : r.qr || r.token })
         } catch { }
+    }
+
+    const cancel = async (entryId) => {
+        try {
+            await call(`/guestlist/${entryId}/cancel`, { method: 'POST' })
+            note('success')
+            toast('Заявка отменена')
+            setCx(null)
+            setQr(null)
+            load()
+        } catch (x) {
+            toast(x.message)
+        }
     }
 
     return (
@@ -341,6 +366,19 @@ export function GuestList() {
                 <Sheet onClose={() => setQr(null)}>
                     <h2 style={{ textAlign: 'center' }}>{qr.name}</h2>
                     <Qr token={qr.token} />
+                    <div style={{ marginTop: 24 }}>
+                        <Btn ghost onClick={() => { setCx(qr); setQr(null) }}>Отменить заявку</Btn>
+                    </div>
+                </Sheet>
+            )}
+
+            {cx && (
+                <Sheet onClose={() => setCx(null)}>
+                    <h2>Отменить заявку?</h2>
+                    <div className="sub" style={{ marginBottom: 16 }}>Вы уверены, что хотите выписаться из гостевого списка на это событие?</div>
+                    <Btn onClick={() => cancel(cx.id)}>Да, отменить</Btn>
+                    <div style={{ height: 10 }} />
+                    <Btn ghost onClick={() => setCx(null)}>Оставить</Btn>
                 </Sheet>
             )}
         </div>
@@ -349,9 +387,17 @@ export function GuestList() {
 
 const ROLES = { Guest: 'Гость', Promoter: 'Промоутер', Guard: 'Охрана', Manager: 'Менеджер' }
 
-export function Profile() {
+export function Profile({ theme, setTheme }) {
     const [m, setM] = useState({ name: tgUser?.first_name || 'Гость', telegramId: tgUser?.id || 0, role: 'Guest' })
     useEffect(() => { call('/me').then(x => setM(p => ({ ...p, ...x }))).catch(() => { }) }, [])
+
+    const THEMES = [
+        { id: 'theme-1', colors: ['#3A36AF', '#2F2B9A', '#3B38A3'] },    
+        { id: 'theme-2', colors: ['#FBFAF8', '#EAEAF2', '#F4F5F0'] },  
+        { id: 'theme-3', colors: ['#682C52', '#8B0425', '#193889'] },  
+        { id: 'theme-4', colors: ['#262B63', '#27458D', '#355989'] }   
+    ]
+
     return (
         <div className="enter">
             <div className="glass hero" style={{ '--i': 0, textAlign: 'center' }}>
@@ -364,12 +410,30 @@ export function Profile() {
                 <h2 style={{ ...rel, marginTop: 16 }}>{m.name}</h2>
                 <div className="sub" style={rel}>ID {m.telegramId || '—'}</div>
             </div>
+
             {[['Роль', ROLES[m.role] || m.role], ['Депозиты', 'Зачитываются в чек'], ['Удержание стола', '15 минут'], ['Вход', 'По QR-коду']].map(([a, b], i) => (
                 <div key={a} className="glass card row" style={{ '--i': i + 1 }}>
                     <span className="sub" style={{ margin: 0 }}>{a}</span>
                     <b className="serif">{b}</b>
                 </div>
             ))}
+
+            {    }
+            <div className="glass card" style={{ '--i': 5 }}>
+                <div className="row" style={{ marginBottom: 8 }}>
+                    <span className="sub" style={{ margin: 0 }}>Цвет фона</span>
+                </div>
+                <div className="theme-swatches">
+                    {THEMES.map(t => (
+                        <div
+                            key={t.id}
+                            className={`theme-swatch ${theme === t.id ? 'active' : ''}`}
+                            style={{ background: `linear-gradient(135deg, ${t.colors[0]} 0%, ${t.colors[1]} 50%, ${t.colors[2]} 100%)` }}
+                            onClick={() => { hap(); setTheme(t.id) }}
+                        />
+                    ))}
+                </div>
+            </div>
         </div>
     )
 }

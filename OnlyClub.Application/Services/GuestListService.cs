@@ -15,8 +15,11 @@ public class GuestListService(
     {
         var ev = await events.GetAsync(eventId, ct) ?? throw new NotFoundException("Event");
         if (ev.IsClosed) throw new DomainException("Event closed");
-        if (req.Age < ev.MinAge) throw new DomainException($"Minimum age {ev.MinAge}");
-        if (await entries.GetActiveForGuestAsync(eventId, guestId, ct) is not null) throw new DomainException("Already registered");
+
+        if (req.Age < ev.MinAge) throw new DomainException($"Минимальный возраст {ev.MinAge} лет");
+        if (req.Age > 60) throw new DomainException("Максимальный возраст 60 лет");
+
+        if (await entries.GetActiveForGuestAsync(eventId, guestId, ct) is not null) throw new DomainException("Вы уже записаны");
 
         if (req.ParentEntryId.HasValue)
         {
@@ -32,10 +35,22 @@ public class GuestListService(
         }
 
         var entry = new GuestListEntry { EventId = eventId, GuestId = guestId, Name = req.Name, ParentEntryId = req.ParentEntryId };
-        entry.Confirm();          
+        entry.Confirm();
         await entries.AddAsync(entry, ct);
         await uow.SaveAsync(ct);
         return new GuestListEntryDto(entry.Id, eventId, entry.Name, entry.Status.ToString(), entry.ParentEntryId);
+    }
+
+    public async Task CancelAsync(Guid entryId, Guid guestId, CancellationToken ct)
+    {
+        var entry = await entries.GetAsync(entryId, ct) ?? throw new NotFoundException("Entry");
+        if (entry.GuestId != guestId) throw new ForbiddenException("Not your entry");
+
+        if (entry.Status == GuestListStatus.Cancelled || entry.Status == GuestListStatus.CheckedIn)
+            throw new DomainException("Невозможно отменить эту заявку");
+
+        entry.Status = GuestListStatus.Cancelled;           
+        await uow.SaveAsync(ct);
     }
 
     public async Task<ScanResult> ScanAsync(ScanRequest req, Guid guardGuestId, long guardTgId, CancellationToken ct)
