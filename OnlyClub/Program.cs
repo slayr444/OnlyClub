@@ -4,6 +4,7 @@ using Microsoft.Extensions.FileProviders;
 using OnlyClub.Adapters;
 using OnlyClub.Adapters.Security;
 using OnlyClub.API.Endpoints;
+using OnlyClub.API.Middleware;     
 using OnlyClub.Application;
 using OnlyClub.Infrastructure;
 
@@ -12,6 +13,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddAdapters(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services
     .AddAuthentication(TmaAuthenticationHandler.SchemeName)
@@ -42,6 +46,8 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+app.UseExceptionHandler();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -49,14 +55,12 @@ var distPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "dis
 if (Directory.Exists(distPath))
 {
     var fileProvider = new PhysicalFileProvider(distPath);
-
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
-
     app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider });
 }
 else
 {
-    app.Logger.LogWarning("Папка wwwroot/dist не найдена. Фронтенд не будет загружен. Выполнили ли вы 'npm run build'?");
+    app.Logger.LogWarning("Папка wwwroot/dist не найдена. Фронтенд не будет загружен.");
 }
 
 app.MapOnlyClubEndpoints();

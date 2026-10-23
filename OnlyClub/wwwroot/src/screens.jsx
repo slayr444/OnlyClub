@@ -66,6 +66,12 @@ export function EventScreen({ e, back, onBook, toast }) {
     }
 
     const reg = async () => {
+        if (+age < e.minAge) {
+            note('error')
+            toast(`Вход только с ${e.minAge} лет!`)
+            return
+        }
+
         setBusy(true)
         try {
             await call(`/events/${e.id}/guestlist`, { method: 'POST', body: { name, age: +age, parentEntryId: null } })
@@ -74,7 +80,7 @@ export function EventScreen({ e, back, onBook, toast }) {
             setGl(false)
         } catch (x) {
             note('error')
-            toast(x.message)
+            toast(x.message)           
         }
         setBusy(false)
     }
@@ -138,8 +144,16 @@ export function EventScreen({ e, back, onBook, toast }) {
                     <div className="sub">Минимальный возраст — {e.minAge}</div>
                     <input className="field" placeholder="Имя" value={name} onChange={x => setName(x.target.value)} />
                     <input className="field" placeholder="Возраст" inputMode="numeric" value={age} onChange={x => setAge(x.target.value.replace(/\D/g, ''))} />
+
+                    {       }
+                    {age && +age < e.minAge && (
+                        <div className="sub" style={{ color: 'var(--bad)', marginTop: 8, textAlign: 'center' }}>
+                            Вход только с {e.minAge} лет
+                        </div>
+                    )}
+
                     <div style={{ marginTop: 16 }}>
-                        <Btn busy={busy} dis={!name || !age} onClick={reg}>Записаться</Btn>
+                        <Btn busy={busy} dis={!name || !age || +age < e.minAge} onClick={reg}>Записаться</Btn>
                     </div>
                 </Sheet>
             )}
