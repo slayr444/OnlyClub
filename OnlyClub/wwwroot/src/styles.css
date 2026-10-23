@@ -98,7 +98,7 @@ html, body {
     overflow-y: auto;
     padding: 18px 18px calc(130px + env(safe-area-inset-bottom,0px));
     position: relative;
-    z-index: 1;
+    /* z-index: 1;  <--- УДАЛЕНО, чтобы шторка перекрывала таб-бар */
     scrollbar-width: none
 }
 
@@ -453,12 +453,12 @@ h2 {
     position: fixed;
     left: 8px;
     right: 8px;
-    bottom: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom,0px)); /* Чуть подняли */
     z-index: 31;
-    padding: 22px 20px calc(22px + env(safe-area-inset-bottom,0px));
+    padding: 22px 20px 30px 20px; /* Добавили отступ снизу для кнопки */
     animation: sheetUp .55s var(--ease) both;
     border-radius: 34px;
-    opacity: 1;      
+    opacity: 1;
 }
 
 .field {
