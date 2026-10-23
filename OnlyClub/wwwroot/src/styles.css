@@ -160,11 +160,13 @@ html, body {
 
 @keyframes sheetUp {
     from {
-        transform: translateY(100%)
+        transform: translateY(100%);
+        opacity: 0;
     }
 
     to {
-        transform: none
+        transform: none;
+        opacity: 1;
     }
 }
 
@@ -455,7 +457,8 @@ h2 {
     z-index: 31;
     padding: 22px 20px calc(22px + env(safe-area-inset-bottom,0px));
     animation: sheetUp .55s var(--ease) both;
-    border-radius: 34px
+    border-radius: 34px;
+    opacity: 1;      
 }
 
 .field {
