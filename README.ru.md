@@ -18,7 +18,7 @@
 <h3 align="center">Закрытый ночной клуб в Telegram: столы, гостевые списки и вход по QR</h3>
 
 <p align="center">
-  <img src="docs/screenshots/01-home.png" width="300" alt="Главный экран OnlyClub">
+  <img src="docs/screenshots/demo.gif" width="300" alt="OnlyClub demo">
 </p>
 
 <p align="center">🌐 <b>Язык:</b> <a href="README.md">English</a> · <b>Русский</b></p>

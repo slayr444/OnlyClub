@@ -18,7 +18,7 @@
 <h3 align="center">A private nightclub inside Telegram: tables, guest lists and QR entry</h3>
 
 <p align="center">
-  <img src="docs/screenshots/01-home.png" width="300" alt="OnlyClub home screen">
+  <img src="docs/screenshots/demo.gif" width="300" alt="OnlyClub demo">
 </p>
 
 <p align="center">🌐 <b>Language:</b> <b>English</b> · <a href="README.ru.md">Русский</a></p>
