@@ -32,7 +32,7 @@ public class GuestListService(
         }
 
         var entry = new GuestListEntry { EventId = eventId, GuestId = guestId, Name = req.Name, ParentEntryId = req.ParentEntryId };
-        entry.Confirm(); // demo: auto-confirm on register (in real app, manager confirms)
+        entry.Confirm();          
         await entries.AddAsync(entry, ct);
         await uow.SaveAsync(ct);
         return new GuestListEntryDto(entry.Id, eventId, entry.Name, entry.Status.ToString(), entry.ParentEntryId);

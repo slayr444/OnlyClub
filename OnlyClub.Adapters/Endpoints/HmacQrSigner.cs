@@ -96,7 +96,7 @@ public sealed class HmacQrSigner : IQrSigner
             .Replace('+', '-')
             .Replace('/', '_');
 
-    private static byte[] Base64UrlDecode(string value)
+    private static byte[] Base64UrlDecode(string value) 
     {
         var padded = value.Replace('-', '+').Replace('_', '/');
         switch (padded.Length % 4)

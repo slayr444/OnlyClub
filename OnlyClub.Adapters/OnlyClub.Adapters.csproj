@@ -14,6 +14,7 @@
     <ProjectReference Include="..\OnlyClub.Application\OnlyClub.Application.csproj" />
     <ProjectReference Include="..\OnlyClub.Core\OnlyClub.Core.csproj" />
     <ProjectReference Include="..\OnlyClub.Infrastructure\OnlyClub.Infrastructure.csproj" />
+	<FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
 </Project>
