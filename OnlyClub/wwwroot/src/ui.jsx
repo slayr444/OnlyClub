@@ -1,5 +1,6 @@
 import { dt } from './utils'
 import React, { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'    
 import qrcode from 'qrcode-generator'
 import { hap } from './tg'
 
@@ -34,11 +35,12 @@ export function Tabs({ tab, set }) {
 }
 
 export function Sheet({ onClose, children }) {
-    return (
+    return createPortal(
         <>
             <div className="scrim" onClick={onClose} />
             <div className="glass sheet">{children}</div>
-        </>
+        </>,
+        document.body      
     )
 }
 
