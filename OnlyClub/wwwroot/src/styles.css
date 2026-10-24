@@ -23,7 +23,8 @@ html, body {
     background: var(--bg);
     color: var(--fg);
     font-family: -apple-system,'SF Pro Text',Inter,system-ui,sans-serif;
-    overflow: hidden
+    overflow: hidden;
+    overscroll-behavior: none
 }
 
 #root {
@@ -44,6 +45,7 @@ html, body {
     z-index: 25;
     pointer-events: none;
     background: linear-gradient(to bottom, var(--bg) 40%, transparent 100%);
+    contain: layout paint style
 }
 
     .header-logo span {
@@ -63,22 +65,25 @@ html, body {
     color: var(--ac);
     margin-left: 3px;
     letter-spacing: 0.05em;
-    padding-bottom: 2px;     
+    padding-bottom: 2px;
 }
 
 .orb {
     position: fixed;
     border-radius: 50%;
-    filter: blur(70px);
     pointer-events: none;
     animation: float 14s ease-in-out infinite;
-    transition: background 0.8s ease-in-out;
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    contain: layout paint size;
+    z-index: 0
 }
 
 .o1 {
     width: 320px;
     height: 320px;
-    background: var(--orb-1, #3A36AF);
+    background: radial-gradient(circle, var(--orb-1, #3A36AF) 0%, transparent 70%);
     opacity: .55;
     top: -90px;
     left: -100px
@@ -87,7 +92,7 @@ html, body {
 .o2 {
     width: 280px;
     height: 280px;
-    background: var(--orb-2, #2F2B9A);
+    background: radial-gradient(circle, var(--orb-2, #2F2B9A) 0%, transparent 70%);
     opacity: .6;
     bottom: 70px;
     right: -110px;
@@ -97,7 +102,7 @@ html, body {
 .o3 {
     width: 220px;
     height: 220px;
-    background: var(--orb-3, #3B38A3);
+    background: radial-gradient(circle, var(--orb-3, #3B38A3) 0%, transparent 70%);
     opacity: .4;
     top: 42%;
     left: 28%;
@@ -107,7 +112,7 @@ html, body {
 .o4 {
     width: 200px;
     height: 200px;
-    background: var(--orb-4, #3835A6);
+    background: radial-gradient(circle, var(--orb-4, #3835A6) 0%, transparent 70%);
     opacity: .45;
     top: 8%;
     right: -60px;
@@ -116,24 +121,27 @@ html, body {
 
 @keyframes float {
     0%,100% {
-        transform: translate(0,0) scale(1)
+        transform: translate3d(0,0,0) scale(1)
     }
 
     33% {
-        transform: translate(40px,30px) scale(1.15)
+        transform: translate3d(40px,30px,0) scale(1.15)
     }
 
     66% {
-        transform: translate(-30px,50px) scale(.9)
+        transform: translate3d(-30px,50px,0) scale(.9)
     }
 }
 
 .scroll {
     height: 100%;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     padding: 80px 18px calc(130px + env(safe-area-inset-bottom,0px));
     position: relative;
-    scrollbar-width: none
+    scrollbar-width: none;
+    z-index: 1
 }
 
     .scroll::-webkit-scrollbar {
@@ -149,14 +157,12 @@ html, body {
 @keyframes rise {
     from {
         opacity: 0;
-        transform: translateY(26px) scale(.97);
-        filter: blur(6px)
+        transform: translate3d(0,26px,0) scale(.97)
     }
 
     to {
         opacity: 1;
-        transform: none;
-        filter: none
+        transform: none
     }
 }
 
@@ -182,19 +188,31 @@ html, body {
     }
 }
 
-@keyframes pulse {
-    0%,100% {
-        box-shadow: 0 0 0 0 rgba(154,151,255,.5)
+@keyframes shimmerMove {
+    from {
+        transform: translate3d(-100%,0,0)
     }
 
-    50% {
-        box-shadow: 0 0 0 10px rgba(154,151,255,0)
+    to {
+        transform: translate3d(100%,0,0)
+    }
+}
+
+@keyframes ring {
+    from {
+        opacity: .6;
+        transform: scale(1)
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(1.18)
     }
 }
 
 @keyframes sheetUp {
     from {
-        transform: translateY(100%)
+        transform: translate3d(0,100%,0)
     }
 
     to {
@@ -250,7 +268,9 @@ h2 {
     border: 1px solid rgba(255,255,255,.12);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.35),inset 0 -8px 18px rgba(255,255,255,.03),0 10px 30px rgba(0,0,0,.4);
     border-radius: 26px;
-    overflow: hidden
+    overflow: hidden;
+    transform: translateZ(0);
+    isolation: isolate
 }
 
     .glass::before {
@@ -261,6 +281,40 @@ h2 {
         pointer-events: none
     }
 
+    .glass.avatar {
+        width: 92px;
+        height: 92px;
+        border-radius: 50%;
+        margin: 0 auto;
+        display: grid;
+        place-items: center;
+        font-family: var(--serif);
+        font-size: 42px;
+        font-weight: 700;
+        overflow: visible
+    }
+
+.avatar::before {
+    border-radius: 50%
+}
+
+.avatar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--ac);
+    animation: ring 2s ease-out infinite;
+    pointer-events: none;
+    will-change: transform, opacity
+}
+
+.glass.lite {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: linear-gradient(135deg,rgba(255,255,255,.15),rgba(255,255,255,.055))
+}
+
 .skel {
     background: linear-gradient(110deg,rgba(255,255,255,.04) 30%,rgba(255,255,255,.12) 50%,rgba(255,255,255,.04) 70%);
     background-size: 200% 100%;
@@ -269,13 +323,16 @@ h2 {
 
 .card {
     padding: 18px;
-    margin-top: 14px
+    margin-top: 14px;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 140px
 }
 
 .press {
     transition: transform .3s var(--ease),filter .3s;
     cursor: pointer;
-    user-select: none
+    user-select: none;
+    touch-action: manipulation
 }
 
     .press:active {
@@ -329,16 +386,21 @@ h2 {
     background: linear-gradient(135deg,#dcdbff,var(--ac) 50%,#5a56d6);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.7),0 8px 28px rgba(58,54,175,.55);
     position: relative;
-    overflow: hidden
+    overflow: hidden;
+    isolation: isolate
 }
 
     .btn::after {
         content: '';
         position: absolute;
-        inset: 0;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 100%;
         background: linear-gradient(110deg,transparent 30%,rgba(255,255,255,.5) 50%,transparent 70%);
-        background-size: 200% 100%;
-        animation: shimmer 3s linear infinite
+        animation: shimmerMove 3s linear infinite;
+        will-change: transform;
+        pointer-events: none
     }
 
     .btn.ghost {
@@ -381,8 +443,23 @@ h2 {
     .tbl.sel {
         border-color: var(--ac);
         box-shadow: inset 0 1px 0 rgba(255,255,255,.4),0 0 0 2px var(--ac),0 0 30px rgba(154,151,255,.4);
-        animation: pulse 1.6s infinite
+        overflow: visible
     }
+
+        .tbl.sel::before {
+            border-radius: inherit
+        }
+
+        .tbl.sel::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            border: 2px solid var(--ac);
+            animation: ring 1.6s ease-out infinite;
+            pointer-events: none;
+            will-change: transform, opacity
+        }
 
     .tbl.dis {
         opacity: .4;
@@ -419,7 +496,9 @@ h2 {
     backdrop-filter: blur(30px) saturate(200%);
     -webkit-backdrop-filter: blur(30px) saturate(200%);
     border: 1px solid rgba(255,255,255,.14);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.4),0 18px 40px rgba(0,0,0,.6)
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.4),0 18px 40px rgba(0,0,0,.6);
+    transform: translateZ(0);
+    contain: layout style
 }
 
 .pill {
@@ -432,7 +511,8 @@ h2 {
     background: linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.06));
     border: 1px solid rgba(255,255,255,.2);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.5),0 0 26px rgba(58,54,175,.6);
-    transition: transform .55s var(--ease)
+    transition: transform .55s var(--ease);
+    will-change: transform
 }
 
 .tab {
@@ -446,7 +526,8 @@ h2 {
     font-size: 11px;
     color: var(--mut);
     transition: color .3s,transform .4s var(--ease);
-    cursor: pointer
+    cursor: pointer;
+    touch-action: manipulation
 }
 
     .tab svg {
@@ -475,8 +556,7 @@ h2 {
 .scrim {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,.55);
-    backdrop-filter: blur(4px);
+    background: rgba(0,0,0,.6);
     z-index: 30;
     animation: fade .3s both
 }
@@ -491,6 +571,7 @@ h2 {
     animation: sheetUp .55s var(--ease) both;
     border-radius: 34px;
     opacity: 1;
+    will-change: transform
 }
 
 .field {
@@ -595,9 +676,21 @@ h2 {
     z-index: 50;
     padding: 12px 20px;
     border-radius: 99px;
-    animation: rise .5s var(--ease) both;
+    animation: toastIn .5s var(--ease) both;
     font-size: 14px;
     white-space: nowrap
+}
+
+@keyframes toastIn {
+    from {
+        opacity: 0;
+        transform: translate3d(-50%,26px,0) scale(.97)
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(-50%,0,0)
+    }
 }
 
 .hero {
@@ -614,7 +707,9 @@ h2 {
         height: 160px;
         border-radius: 50%;
         background: radial-gradient(circle,rgba(58,54,175,.8),transparent 70%);
-        animation: float 8s ease-in-out infinite
+        animation: float 8s ease-in-out infinite;
+        will-change: transform;
+        pointer-events: none
     }
 
 body.theme-2 {
@@ -666,3 +761,9 @@ body.theme-4 {
         border-color: var(--fg);
         box-shadow: 0 0 20px rgba(255,255,255,.3);
     }
+
+@media (prefers-reduced-motion: reduce) {
+    .orb, .hero::after, .btn::after, .tbl.sel::after, .avatar::after {
+        animation: none
+    }
+}

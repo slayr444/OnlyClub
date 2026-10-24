@@ -1,6 +1,6 @@
 import { dt } from './utils'
-import React, { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'    
+import React, { useEffect, useRef, useState, memo } from 'react'
+import { createPortal } from 'react-dom'
 import qrcode from 'qrcode-generator'
 import { hap } from './tg'
 
@@ -11,86 +11,119 @@ const I = {
     user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'
 }
 
-const Ico = ({ d }) => (
+const Ico = memo(({ d }) => (
     <svg viewBox="0 0 24 24">
         <path d={d} />
     </svg>
-)
+))
 
 const TABS = [['home', 'Афиша'], ['list', 'Список'], ['tick', 'Брони'], ['user', 'Профиль']]
 
-export function Tabs({ tab, set }) {
+export const Tabs = memo(function Tabs({ tab, set }) {
     const i = TABS.findIndex(x => x[0] === tab)
     return (
         <nav className="bar">
-            <div className="pill" style={{ transform: `translateX(${i * 100}%)` }} />
+            <div className="pill" style={{ transform: `translate3d(${i * 100}%,0,0)` }} />
             {TABS.map(([k, l]) => (
-                <div key={k} className={'tab' + (tab === k ? ' on' : '')} onClick={() => { hap(); set(k) }}>
+                <div
+                    key={k}
+                    className={'tab' + (tab === k ? ' on' : '')}
+                    onClick={() => {
+                        hap()
+                        set(k)
+                    }}
+                >
                     <Ico d={I[k]} />
                     {l}
                 </div>
             ))}
         </nav>
     )
-}
+})
 
 export function Sheet({ onClose, children }) {
+    useEffect(() => {
+        const prev = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            document.body.style.overflow = prev
+        }
+    }, [])
     return createPortal(
         <>
             <div className="scrim" onClick={onClose} />
             <div className="glass sheet">{children}</div>
         </>,
-        document.body      
+        document.body
     )
 }
 
-export const Toast = ({ m }) => (m ? <div className="glass toast">{m}</div> : null)
+export const Toast = memo(({ m }) => (m ? <div className="glass toast">{m}</div> : null))
 
-export function Ring({ until, total = 9e5 }) {
-    const left = () => Math.max(0, dt(until) - Date.now())
-    const [l, setL] = useState(left())
+const TOTAL_DEFAULT = 9e5
+const C = 2 * Math.PI * 40
+
+export const Ring = memo(function Ring({ until, total = TOTAL_DEFAULT }) {
+    const target = useRef(0)
+    target.current = dt(until)
+    const [l, setL] = useState(() => Math.max(0, target.current - Date.now()))
+
     useEffect(() => {
-        const i = setInterval(() => setL(left()), 250)
-        return () => clearInterval(i)
+        let id
+        const tick = () => {
+            const left = Math.max(0, target.current - Date.now())
+            setL(prev => (Math.ceil(prev / 1000) === Math.ceil(left / 1000) && Math.abs(prev - left) < 1000 ? prev : left))
+            if (left > 0) id = setTimeout(tick, 1000 - (left % 1000) + 5)
+        }
+        tick()
+        return () => clearTimeout(id)
     }, [until])
+
     const s = Math.ceil(l / 1000)
-    const c = 2 * Math.PI * 40
     return (
         <div className="ring">
             <svg width="96" height="96" viewBox="0 0 96 96">
                 <circle cx="48" cy="48" r="40" stroke="rgba(255,255,255,.1)" />
                 <circle
-                    cx="48" cy="48" r="40"
+                    cx="48"
+                    cy="48"
+                    r="40"
                     stroke={l < 12e4 ? '#ff6b7a' : '#9a97ff'}
-                    strokeDasharray={c}
-                    strokeDashoffset={c * (1 - l / total)}
-                    style={{ transition: 'stroke-dashoffset .3s linear, stroke .5s' }}
+                    strokeDasharray={C}
+                    strokeDashoffset={C * (1 - l / total)}
+                    style={{ transition: 'stroke-dashoffset 1s linear, stroke .5s' }}
                 />
             </svg>
-            <div className="t">{Math.floor(s / 60)}:{String(s % 60).padStart(2, '0')}</div>
+            <div className="t">
+                {Math.floor(s / 60)}:{String(s % 60).padStart(2, '0')}
+            </div>
         </div>
     )
-}
+})
 
-export function Qr({ token }) {
-    const ref = useRef()
+export const Qr = memo(function Qr({ token }) {
+    const ref = useRef(null)
     useEffect(() => {
+        if (!ref.current) return
         const q = qrcode(0, 'M')
         q.addData(token)
         q.make()
         ref.current.innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true })
     }, [token])
     return <div className="qr" ref={ref} />
-}
+})
 
-export function Btn({ children, onClick, ghost, busy, dis }) {
+export const Btn = memo(function Btn({ children, onClick, ghost, busy, dis }) {
     return (
         <button
             className={'btn press' + (ghost ? ' ghost' : '')}
             disabled={busy || dis}
-            onClick={e => { hap('medium'); onClick && onClick(e) }}
+            onClick={e => {
+                hap('medium')
+                onClick && onClick(e)
+            }}
         >
             {busy ? <div className="spin" /> : children}
         </button>
     )
-}
+})

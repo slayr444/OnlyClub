@@ -1,15 +1,57 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react'
 import { call } from './api'
 import { hap, note, tgUser } from './tg'
 import { money, fmt, dt, sleep, ST, BST, chipCls } from './utils'
 import { Sheet, Ring, Qr, Btn } from './ui'
 
 const rel = { position: 'relative', zIndex: 1 }
+const ROLES = { Guest: 'Гость', Promoter: 'Промоутер', Guard: 'Охрана', Manager: 'Менеджер' }
+const THEMES = [
+    { id: 'theme-1', bg: 'linear-gradient(135deg, #3A36AF 0%, #2F2B9A 50%, #3B38A3 100%)' },
+    { id: 'theme-2', bg: 'linear-gradient(135deg, #FBFAF8 0%, #EAEAF2 50%, #F4F5F0 100%)' },
+    { id: 'theme-3', bg: 'linear-gradient(135deg, #682C52 0%, #8B0425 50%, #193889 100%)' },
+    { id: 'theme-4', bg: 'linear-gradient(135deg, #262B63 0%, #27458D 50%, #355989 100%)' }
+]
+
+function useMounted() {
+    const r = useRef(true)
+    useEffect(() => {
+        r.current = true
+        return () => { r.current = false }
+    }, [])
+    return r
+}
+
+const HeroCard = memo(function HeroCard({ e, i, open }) {
+    const click = useCallback(() => {
+        hap()
+        open(e)
+    }, [e, open])
+    return (
+        <div className="glass hero press" style={{ '--i': i + 1 }} onClick={click}>
+            <div className="row" style={rel}>
+                <span className="chip ac">{e.minAge}+</span>
+                <span className={'chip ' + (e.isClosed ? 'bad' : 'ok')}>{e.isClosed ? 'Закрыто' : 'Открыта продажа'}</span>
+            </div>
+            <h2 style={{ ...rel, fontSize: 30, marginTop: 42 }}>{e.title}</h2>
+            <div className="sub" style={rel}>{fmt(e.startsAt)}</div>
+            <div className="sub" style={rel}>Гостевой список · {e.guestListLimit} мест</div>
+        </div>
+    )
+})
 
 export function Home({ open }) {
     const [ev, setEv] = useState(null)
     const [err, setErr] = useState('')
-    useEffect(() => { call('/events').then(setEv).catch(x => setErr(x.message)) }, [])
+
+    useEffect(() => {
+        let off = false
+        call('/events')
+            .then(x => { if (!off) setEv(x) })
+            .catch(x => { if (!off) setErr(x.message) })
+        return () => { off = true }
+    }, [])
+
     return (
         <div className="enter">
             <div style={{ '--i': 0 }}>
@@ -19,22 +61,37 @@ export function Home({ open }) {
                     <i style={{ fontWeight: 400, color: 'var(--ac)' }}>принадлежит вам</i>
                 </h1>
             </div>
-            {err && <div className="glass card" style={{ '--i': 1 }}>{err}</div>}
-            {!ev && !err && [1, 2].map(i => <div key={i} className="glass card skel" style={{ '--i': i, height: 150 }} />)}
-            {ev?.map((e, i) => (
-                <div key={e.id} className="glass hero press" style={{ '--i': i + 1 }} onClick={() => { hap(); open(e) }}>
-                    <div className="row" style={rel}>
-                        <span className="chip ac">{e.minAge}+</span>
-                        <span className={'chip ' + (e.isClosed ? 'bad' : 'ok')}>{e.isClosed ? 'Закрыто' : 'Открыта продажа'}</span>
-                    </div>
-                    <h2 style={{ ...rel, fontSize: 30, marginTop: 42 }}>{e.title}</h2>
-                    <div className="sub" style={rel}>{fmt(e.startsAt)}</div>
-                    <div className="sub" style={rel}>Гостевой список · {e.guestListLimit} мест</div>
-                </div>
-            ))}
+            {err && <div className="glass lite card" style={{ '--i': 1 }}>{err}</div>}
+            {!ev && !err && [1, 2].map(i => <div key={i} className="glass lite card skel" style={{ '--i': i, height: 150 }} />)}
+            {ev?.map((e, i) => <HeroCard key={e.id} e={e} i={i} open={open} />)}
         </div>
     )
 }
+
+const TableCard = memo(function TableCard({ t, i, selected, closed, onPick }) {
+    const st = ST[t.status]
+    const click = useCallback(() => {
+        if (t.status === 'Free' && !closed) onPick(t)
+    }, [t, closed, onPick])
+    return (
+        <div
+            className={'glass lite tbl press' + (selected ? ' sel' : '') + (t.status !== 'Free' || closed ? ' dis' : '')}
+            style={{ '--i': i + 5 }}
+            onClick={click}
+        >
+            <div className="row">
+                <div className="num">{t.number}</div>
+                <span style={{ fontSize: 12, color: st[1] }}>
+                    <span className="dot" style={{ background: st[1] }} />
+                    {st[0]}
+                </span>
+            </div>
+            <div className="sub">до {t.capacity} гостей</div>
+            <div style={{ marginTop: 8, fontSize: 13 }}>Мин. чек {money(t.minSpend)}</div>
+            <div className="sub" style={{ marginTop: 2 }}>Депозит {money(t.deposit)}</div>
+        </div>
+    )
+})
 
 export function EventScreen({ e, back, onBook, toast }) {
     const [tb, setTb] = useState(null)
@@ -44,11 +101,37 @@ export function EventScreen({ e, back, onBook, toast }) {
     const [gl, setGl] = useState(false)
     const [name, setName] = useState(tgUser?.first_name || '')
     const [age, setAge] = useState('')
+    const mounted = useMounted()
 
-    const loadTables = () => call(`/events/${e.id}/tables`).then(setTb).catch(x => toast(x.message))
-    useEffect(() => { loadTables() }, [e.id])
+    const loadTables = useCallback(() => {
+        return call(`/events/${e.id}/tables`)
+            .then(x => { if (mounted.current) setTb(x) })
+            .catch(x => { if (mounted.current) toast(x.message) })
+    }, [e.id, toast, mounted])
 
-    const pick = t => { hap(); setSel(t); setSize(Math.min(2, t.capacity)) }
+    useEffect(() => { loadTables() }, [loadTables])
+
+    const pick = useCallback(t => {
+        hap()
+        setSel(t)
+        setSize(Math.min(2, t.capacity))
+    }, [])
+
+    const closeSel = useCallback(() => setSel(null), [])
+    const closeGl = useCallback(() => setGl(false), [])
+    const openGl = useCallback(() => setGl(true), [])
+    const goBack = useCallback(() => {
+        hap()
+        back()
+    }, [back])
+    const dec = useCallback(() => {
+        hap()
+        setSize(s => Math.max(1, s - 1))
+    }, [])
+    const inc = useCallback(() => {
+        hap()
+        setSize(s => Math.min(sel ? sel.capacity : s, s + 1))
+    }, [sel])
 
     const book = async () => {
         setBusy(true)
@@ -59,10 +142,12 @@ export function EventScreen({ e, back, onBook, toast }) {
         } catch (x) {
             note('error')
             toast(x.message)
-            setSel(null)
-            loadTables()
+            if (mounted.current) {
+                setSel(null)
+                loadTables()
+            }
         }
-        setBusy(false)
+        if (mounted.current) setBusy(false)
     }
 
     const reg = async () => {
@@ -82,51 +167,37 @@ export function EventScreen({ e, back, onBook, toast }) {
             await call(`/events/${e.id}/guestlist`, { method: 'POST', body: { name, age: +age, parentEntryId: null } })
             note('success')
             toast('Вы в списке ✓')
-            setGl(false)
+            if (mounted.current) setGl(false)
         } catch (x) {
             note('error')
             toast(x.message)
         }
-        setBusy(false)
+        if (mounted.current) setBusy(false)
     }
+
+    const ageBad = !name || !age || +age < e.minAge || +age > 60
 
     return (
         <div className="enter">
             <div style={{ '--i': 0 }}>
-                <div className="glass back press" onClick={() => { hap(); back() }}>‹ Назад</div>
+                <div className="glass lite back press" onClick={goBack}>‹ Назад</div>
             </div>
             <h1 style={{ '--i': 1 }}>{e.title}</h1>
             <div className="sub" style={{ '--i': 2 }}>{fmt(e.startsAt)} · {e.minAge}+</div>
             <div style={{ '--i': 3, marginTop: 16 }}>
-                <Btn ghost dis={e.isClosed} onClick={() => setGl(true)}>Встать в гостевой список</Btn>
+                <Btn ghost dis={e.isClosed} onClick={openGl}>Встать в гостевой список</Btn>
             </div>
             <h2 style={{ '--i': 4, marginTop: 28 }}>Столы</h2>
             <div className="grid">
                 {!tb
-                    ? [1, 2, 3, 4].map(i => <div key={i} className="glass tbl skel" style={{ '--i': i + 4, height: 130 }} />)
+                    ? [1, 2, 3, 4].map(i => <div key={i} className="glass lite tbl skel" style={{ '--i': i + 4, height: 130 }} />)
                     : tb.map((t, i) => (
-                        <div
-                            key={t.id}
-                            className={'glass tbl press' + (sel?.id === t.id ? ' sel' : '') + (t.status !== 'Free' || e.isClosed ? ' dis' : '')}
-                            style={{ '--i': i + 5 }}
-                            onClick={() => pick(t)}
-                        >
-                            <div className="row">
-                                <div className="num">{t.number}</div>
-                                <span style={{ fontSize: 12, color: ST[t.status][1] }}>
-                                    <span className="dot" style={{ background: ST[t.status][1] }} />
-                                    {ST[t.status][0]}
-                                </span>
-                            </div>
-                            <div className="sub">до {t.capacity} гостей</div>
-                            <div style={{ marginTop: 8, fontSize: 13 }}>Мин. чек {money(t.minSpend)}</div>
-                            <div className="sub" style={{ marginTop: 2 }}>Депозит {money(t.deposit)}</div>
-                        </div>
+                        <TableCard key={t.id} t={t} i={i} selected={sel?.id === t.id} closed={e.isClosed} onPick={pick} />
                     ))}
             </div>
 
             {sel && (
-                <Sheet onClose={() => setSel(null)}>
+                <Sheet onClose={closeSel}>
                     <div className="row">
                         <h2>Стол {sel.number}</h2>
                         <span className="chip ac">Депозит {money(sel.deposit)}</span>
@@ -134,9 +205,9 @@ export function EventScreen({ e, back, onBook, toast }) {
                     <div className="row" style={{ margin: '20px 0' }}>
                         <span className="sub" style={{ margin: 0 }}>Гостей</span>
                         <div className="step">
-                            <div className="glass rnd press" onClick={() => { hap(); setSize(Math.max(1, size - 1)) }}>−</div>
+                            <div className="glass lite rnd press" onClick={dec}>−</div>
                             <b key={size}>{size}</b>
-                            <div className="glass rnd press" onClick={() => { hap(); setSize(Math.min(sel.capacity, size + 1)) }}>+</div>
+                            <div className="glass lite rnd press" onClick={inc}>+</div>
                         </div>
                     </div>
                     <Btn busy={busy} onClick={book}>Забронировать на 15 минут</Btn>
@@ -144,7 +215,7 @@ export function EventScreen({ e, back, onBook, toast }) {
             )}
 
             {gl && (
-                <Sheet onClose={() => setGl(false)}>
+                <Sheet onClose={closeGl}>
                     <h2>Гостевой список</h2>
                     <div className="sub">Возраст: от {e.minAge} до 60 лет</div>
                     <input className="field" placeholder="Имя" value={name} onChange={x => setName(x.target.value)} />
@@ -162,7 +233,7 @@ export function EventScreen({ e, back, onBook, toast }) {
                     )}
 
                     <div style={{ marginTop: 16 }}>
-                        <Btn busy={busy} dis={!name || !age || +age < e.minAge || +age > 60} onClick={reg}>Записаться</Btn>
+                        <Btn busy={busy} dis={ageBad} onClick={reg}>Записаться</Btn>
                     </div>
                 </Sheet>
             )}
@@ -174,14 +245,18 @@ export function Booking({ b, done, toast }) {
     const [cur, setCur] = useState(b)
     const [busy, setBusy] = useState(false)
     const [exp, setExp] = useState(false)
+    const mounted = useMounted()
 
     useEffect(() => {
         if (cur.status !== 'Held') return
-        const i = setInterval(() => {
-            if (dt(cur.heldUntilAt) < Date.now()) { setExp(true); clearInterval(i) }
-        }, 500)
-        return () => clearInterval(i)
-    }, [cur])
+        const ms = dt(cur.heldUntilAt) - Date.now()
+        if (ms <= 0) {
+            setExp(true)
+            return
+        }
+        const id = setTimeout(() => setExp(true), ms + 50)
+        return () => clearTimeout(id)
+    }, [cur.status, cur.heldUntilAt])
 
     const pay = async () => {
         setBusy(true)
@@ -189,12 +264,15 @@ export function Booking({ b, done, toast }) {
             const r = await call(`/bookings/${cur.id}/pay`, { method: 'POST' })
             if (r && r.success === false) throw new Error('Платёж не прошёл')
             for (let i = 0; i < 20; i++) {
+                if (!mounted.current) return
                 const list = await call('/bookings/my')
                 const n = list.find(x => x.id === cur.id)
                 if (n && n.status === 'Confirmed') {
                     note('success')
-                    setCur({ ...cur, ...n })
-                    setBusy(false)
+                    if (mounted.current) {
+                        setCur(c => ({ ...c, ...n }))
+                        setBusy(false)
+                    }
                     return
                 }
                 await sleep(1500)
@@ -204,7 +282,7 @@ export function Booking({ b, done, toast }) {
             note('error')
             toast(x.message)
         }
-        setBusy(false)
+        if (mounted.current) setBusy(false)
     }
 
     const ok = cur.status === 'Confirmed'
@@ -212,7 +290,7 @@ export function Booking({ b, done, toast }) {
     return (
         <div className="enter" style={{ textAlign: 'center' }}>
             <div style={{ '--i': 0, textAlign: 'left' }}>
-                <div className="glass back press" onClick={done}>‹ К броням</div>
+                <div className="glass lite back press" onClick={done}>‹ К броням</div>
             </div>
             <h1 style={{ '--i': 1 }}>{ok ? 'Стол ваш' : exp ? 'Время вышло' : 'Оплатите депозит'}</h1>
             <div className="sub" style={{ '--i': 2 }}>
@@ -224,7 +302,7 @@ export function Booking({ b, done, toast }) {
                     <div className="sub">Покажите код охране на входе</div>
                 </div>
             ) : (
-                <div className="glass card" style={{ '--i': 3, display: 'flex', alignItems: 'center', gap: 18, textAlign: 'left' }}>
+                <div className="glass lite card" style={{ '--i': 3, display: 'flex', alignItems: 'center', gap: 18, textAlign: 'left' }}>
                     <Ring until={cur.heldUntilAt} />
                     <div>
                         <div className="sub" style={{ margin: 0 }}>Депозит</div>
@@ -242,103 +320,148 @@ export function Booking({ b, done, toast }) {
     )
 }
 
+const BookingCard = memo(function BookingCard({ b, i, onOpen, onQr, onCancel }) {
+    return (
+        <div className="glass lite card" style={{ '--i': i + 1 }}>
+            <div className="row">
+                <h2>Стол {b.tableNumber}</h2>
+                <span className={'chip ' + chipCls(b.status)}>{BST[b.status]}</span>
+            </div>
+            <div className="sub">{b.partySize} гост.</div>
+            <div style={{ marginTop: 10, fontSize: 14 }}>
+                Депозит внесён: {money(b.depositPaid)} · остаток чека {money(b.remainingMinSpend)}
+            </div>
+            {b.status === 'Held' && (
+                <div style={{ marginTop: 14 }}><Btn onClick={() => onOpen(b)}>Оплатить</Btn></div>
+            )}
+            {b.status === 'Confirmed' && (
+                <div className="row" style={{ marginTop: 14 }}>
+                    <Btn onClick={() => onQr(b)}>QR-код</Btn>
+                    <Btn ghost onClick={() => onCancel(b)}>Отменить</Btn>
+                </div>
+            )}
+        </div>
+    )
+})
+
 export function Bookings({ open, toast }) {
     const [l, setL] = useState(null)
     const [qr, setQr] = useState(null)
     const [cx, setCx] = useState(null)
-    const load = () => call('/bookings/my').then(setL).catch(x => { setL([]); toast(x.message) })
-    useEffect(() => { load() }, [])
+    const mounted = useMounted()
+
+    const load = useCallback(() => {
+        return call('/bookings/my')
+            .then(x => { if (mounted.current) setL(x) })
+            .catch(x => {
+                if (!mounted.current) return
+                setL([])
+                toast(x.message)
+            })
+    }, [toast, mounted])
+
+    useEffect(() => { load() }, [load])
 
     const cancel = async b => {
         try {
             const r = await call(`/bookings/${b.id}/cancel`, { method: 'POST' })
             note('warning')
             toast(r?.refundAmount > 0 ? 'Возврат ' + money(r.refundAmount) : 'Бронь отменена')
-            setCx(null)
-            load()
+            if (mounted.current) {
+                setCx(null)
+                load()
+            }
         } catch (x) {
             toast(x.message)
         }
     }
 
+    const closeQr = useCallback(() => setQr(null), [])
+    const closeCx = useCallback(() => setCx(null), [])
+
     return (
         <div className="enter">
             <h1 style={{ '--i': 0 }}>Мои брони</h1>
             {l && !l.length && (
-                <div className="glass card" style={{ '--i': 1, textAlign: 'center' }}>
+                <div className="glass lite card" style={{ '--i': 1, textAlign: 'center' }}>
                     <h2>Пока пусто</h2>
                     <div className="sub">Выберите событие в афише</div>
                 </div>
             )}
-            {!l && <div className="glass card skel" style={{ '--i': 1, height: 110 }} />}
+            {!l && <div className="glass lite card skel" style={{ '--i': 1, height: 110 }} />}
             {l?.map((b, i) => (
-                <div key={b.id} className="glass card" style={{ '--i': i + 1 }}>
-                    <div className="row">
-                        <h2>Стол {b.tableNumber}</h2>
-                        <span className={'chip ' + chipCls(b.status)}>{BST[b.status]}</span>
-                    </div>
-                    <div className="sub">{b.partySize} гост.</div>
-                    <div style={{ marginTop: 10, fontSize: 14 }}>
-                        Депозит внесён: {money(b.depositPaid)} · остаток чека {money(b.remainingMinSpend)}
-                    </div>
-                    {b.status === 'Held' && (
-                        <div style={{ marginTop: 14 }}><Btn onClick={() => open(b)}>Оплатить</Btn></div>
-                    )}
-                    {b.status === 'Confirmed' && (
-                        <div className="row" style={{ marginTop: 14 }}>
-                            <Btn onClick={() => setQr(b)}>QR-код</Btn>
-                            <Btn ghost onClick={() => setCx(b)}>Отменить</Btn>
-                        </div>
-                    )}
-                </div>
+                <BookingCard key={b.id} b={b} i={i} onOpen={open} onQr={setQr} onCancel={setCx} />
             ))}
             {qr && (
-                <Sheet onClose={() => setQr(null)}>
+                <Sheet onClose={closeQr}>
                     <h2 style={{ textAlign: 'center' }}>Стол {qr.tableNumber}</h2>
                     <Qr token={qr.qrToken} />
                 </Sheet>
             )}
             {cx && (
-                <Sheet onClose={() => setCx(null)}>
+                <Sheet onClose={closeCx}>
                     <h2>Отменить бронь?</h2>
                     <div className="sub" style={{ marginBottom: 16 }}>Возврат: 100% за 48 ч, 50% за 12 ч, позже — без возврата.</div>
                     <Btn onClick={() => cancel(cx)}>Да, отменить</Btn>
                     <div style={{ height: 10 }} />
-                    <Btn ghost onClick={() => setCx(null)}>Оставить</Btn>
+                    <Btn ghost onClick={closeCx}>Оставить</Btn>
                 </Sheet>
             )}
         </div>
     )
 }
 
+const GuestCard = memo(function GuestCard({ e, i, onShow }) {
+    return (
+        <div className="glass lite card press" style={{ '--i': i + 1 }} onClick={() => onShow(e)}>
+            <div className="row">
+                <h2>{e.name}</h2>
+                <span className={'chip ' + chipCls(e.status)}>{(ST[e.status] || [e.status])[0]}</span>
+            </div>
+            <div className="sub">Нажмите, чтобы показать QR</div>
+        </div>
+    )
+})
+
 export function GuestList({ toast }) {
     const [l, setL] = useState(null)
     const [qr, setQr] = useState(null)
     const [cx, setCx] = useState(null)
+    const mounted = useMounted()
 
-    const load = () => call('/guestlist/my').then(setL).catch(() => setL([]))
-    useEffect(() => { load() }, [])
+    const load = useCallback(() => {
+        return call('/guestlist/my')
+            .then(x => { if (mounted.current) setL(x) })
+            .catch(() => { if (mounted.current) setL([]) })
+    }, [mounted])
 
-    const show = async e => {
+    useEffect(() => { load() }, [load])
+
+    const show = useCallback(async e => {
         hap()
         try {
             const r = await call(`/guestlist/${e.id}/qr`)
-            setQr({ id: e.id, name: e.name, token: typeof r === 'string' ? r : r.qr || r.token })
+            if (mounted.current) setQr({ id: e.id, name: e.name, token: typeof r === 'string' ? r : r.qr || r.token })
         } catch { }
-    }
+    }, [mounted])
 
-    const cancel = async (entryId) => {
+    const cancel = async entryId => {
         try {
             await call(`/guestlist/${entryId}/cancel`, { method: 'POST' })
             note('success')
             toast('Заявка отменена')
-            setCx(null)
-            setQr(null)
-            load()
+            if (mounted.current) {
+                setCx(null)
+                setQr(null)
+                load()
+            }
         } catch (x) {
             toast(x.message)
         }
     }
+
+    const closeQr = useCallback(() => setQr(null), [])
+    const closeCx = useCallback(() => setCx(null), [])
 
     return (
         <div className="enter">
@@ -346,24 +469,16 @@ export function GuestList({ toast }) {
                 Гостевой<br />
                 <i style={{ fontWeight: 400, color: 'var(--ac)' }}>список</i>
             </h1>
-            {!l && <div className="glass card skel" style={{ '--i': 1, height: 90 }} />}
+            {!l && <div className="glass lite card skel" style={{ '--i': 1, height: 90 }} />}
             {l && !l.length && (
-                <div className="glass card" style={{ '--i': 1, textAlign: 'center' }}>
+                <div className="glass lite card" style={{ '--i': 1, textAlign: 'center' }}>
                     <h2>Вы пока не записаны</h2>
                     <div className="sub">Откройте событие и нажмите «Встать в список»</div>
                 </div>
             )}
-            {l?.map((e, i) => (
-                <div key={e.id} className="glass card press" style={{ '--i': i + 1 }} onClick={() => show(e)}>
-                    <div className="row">
-                        <h2>{e.name}</h2>
-                        <span className={'chip ' + chipCls(e.status)}>{(ST[e.status] || [e.status])[0]}</span>
-                    </div>
-                    <div className="sub">Нажмите, чтобы показать QR</div>
-                </div>
-            ))}
+            {l?.map((e, i) => <GuestCard key={e.id} e={e} i={i} onShow={show} />)}
             {qr && (
-                <Sheet onClose={() => setQr(null)}>
+                <Sheet onClose={closeQr}>
                     <h2 style={{ textAlign: 'center' }}>{qr.name}</h2>
                     <Qr token={qr.token} />
                     <div style={{ marginTop: 24 }}>
@@ -373,65 +488,70 @@ export function GuestList({ toast }) {
             )}
 
             {cx && (
-                <Sheet onClose={() => setCx(null)}>
+                <Sheet onClose={closeCx}>
                     <h2>Отменить заявку?</h2>
                     <div className="sub" style={{ marginBottom: 16 }}>Вы уверены, что хотите выписаться из гостевого списка на это событие?</div>
                     <Btn onClick={() => cancel(cx.id)}>Да, отменить</Btn>
                     <div style={{ height: 10 }} />
-                    <Btn ghost onClick={() => setCx(null)}>Оставить</Btn>
+                    <Btn ghost onClick={closeCx}>Оставить</Btn>
                 </Sheet>
             )}
         </div>
     )
 }
 
-const ROLES = { Guest: 'Гость', Promoter: 'Промоутер', Guard: 'Охрана', Manager: 'Менеджер' }
+const Swatch = memo(function Swatch({ t, active, set }) {
+    return (
+        <div
+            className={'theme-swatch' + (active ? ' active' : '')}
+            style={{ background: t.bg }}
+            onClick={() => {
+                hap()
+                set(t.id)
+            }}
+        />
+    )
+})
 
 export function Profile({ theme, setTheme }) {
     const [m, setM] = useState({ name: tgUser?.first_name || 'Гость', telegramId: tgUser?.id || 0, role: 'Guest' })
-    useEffect(() => { call('/me').then(x => setM(p => ({ ...p, ...x }))).catch(() => { }) }, [])
 
-    const THEMES = [
-        { id: 'theme-1', colors: ['#3A36AF', '#2F2B9A', '#3B38A3'] },    
-        { id: 'theme-2', colors: ['#FBFAF8', '#EAEAF2', '#F4F5F0'] },  
-        { id: 'theme-3', colors: ['#682C52', '#8B0425', '#193889'] },  
-        { id: 'theme-4', colors: ['#262B63', '#27458D', '#355989'] }   
-    ]
+    useEffect(() => {
+        let off = false
+        call('/me')
+            .then(x => { if (!off) setM(p => ({ ...p, ...x })) })
+            .catch(() => { })
+        return () => { off = true }
+    }, [])
+
+    const rows = useMemo(() => [
+        ['Роль', ROLES[m.role] || m.role],
+        ['Депозиты', 'Зачитываются в чек'],
+        ['Удержание стола', '15 минут'],
+        ['Вход', 'По QR-коду']
+    ], [m.role])
 
     return (
         <div className="enter">
             <div className="glass hero" style={{ '--i': 0, textAlign: 'center' }}>
-                <div
-                    className="glass"
-                    style={{ width: 92, height: 92, borderRadius: '50%', margin: '0 auto', display: 'grid', placeItems: 'center', fontFamily: 'var(--serif)', fontSize: 42, fontWeight: 700, animation: 'pulse 2s infinite' }}
-                >
-                    {(m.name || '?')[0]}
-                </div>
+                <div className="glass avatar">{(m.name || '?')[0]}</div>
                 <h2 style={{ ...rel, marginTop: 16 }}>{m.name}</h2>
                 <div className="sub" style={rel}>ID {m.telegramId || '—'}</div>
             </div>
 
-            {[['Роль', ROLES[m.role] || m.role], ['Депозиты', 'Зачитываются в чек'], ['Удержание стола', '15 минут'], ['Вход', 'По QR-коду']].map(([a, b], i) => (
-                <div key={a} className="glass card row" style={{ '--i': i + 1 }}>
+            {rows.map(([a, b], i) => (
+                <div key={a} className="glass lite card row" style={{ '--i': i + 1 }}>
                     <span className="sub" style={{ margin: 0 }}>{a}</span>
                     <b className="serif">{b}</b>
                 </div>
             ))}
 
-            {    }
-            <div className="glass card" style={{ '--i': 5 }}>
+            <div className="glass lite card" style={{ '--i': 5 }}>
                 <div className="row" style={{ marginBottom: 8 }}>
                     <span className="sub" style={{ margin: 0 }}>Цвет фона</span>
                 </div>
                 <div className="theme-swatches">
-                    {THEMES.map(t => (
-                        <div
-                            key={t.id}
-                            className={`theme-swatch ${theme === t.id ? 'active' : ''}`}
-                            style={{ background: `linear-gradient(135deg, ${t.colors[0]} 0%, ${t.colors[1]} 50%, ${t.colors[2]} 100%)` }}
-                            onClick={() => { hap(); setTheme(t.id) }}
-                        />
-                    ))}
+                    {THEMES.map(t => <Swatch key={t.id} t={t} active={theme === t.id} set={setTheme} />)}
                 </div>
             </div>
         </div>
