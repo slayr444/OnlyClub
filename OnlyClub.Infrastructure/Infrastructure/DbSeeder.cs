@@ -10,14 +10,19 @@ public static class DbSeeder
     {
         if (await db.Events.AnyAsync()) return;
 
-        var manager = new Guest { TelegramId = 100000001, Name = "Manager", Role = Role.Manager };
-        var guard = new Guest { TelegramId = 100000002, Name = "Guard", Role = Role.Guard };
-        var promoterGuest = new Guest { TelegramId = 100000003, Name = "Promoter", Role = Role.Promoter };
-        var guest = new Guest { TelegramId = 100000004, Name = "Guest", Role = Role.Guest };
-        db.Guests.AddRange(manager, guard, promoterGuest, guest);
+        var manager = await GetOrCreateGuestAsync(db, 100000001, "Manager", Role.Manager);
+        var guard = await GetOrCreateGuestAsync(db, 100000002, "Guard", Role.Guard);
+        var promoterGuest = await GetOrCreateGuestAsync(db, 100000003, "Promoter", Role.Promoter);
+        var guest = await GetOrCreateGuestAsync(db, 100000004, "Guest", Role.Guest);
 
-        var promoter = new Promoter { GuestId = promoterGuest.Id, Name = "Promoter", Code = "demo" };
-        db.Promoters.Add(promoter);
+        if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync();
+
+        var promoter = await db.Promoters.FirstOrDefaultAsync(p => p.GuestId == promoterGuest.Id);
+        if (promoter == null)
+        {
+            promoter = new Promoter { GuestId = promoterGuest.Id, Name = "Promoter", Code = "demo" };
+            db.Promoters.Add(promoter);
+        }
 
         var secretRoom = new Event
         {
@@ -32,8 +37,8 @@ public static class DbSeeder
             {
                 Number = i,
                 Capacity = 4 + i,
-                MinSpend = 100000,   
-                Deposit = 30000            
+                MinSpend = 100000,
+                Deposit = 30000
             });
         }
 
@@ -50,7 +55,7 @@ public static class DbSeeder
             {
                 Number = i,
                 Capacity = 4 + (i % 3) * 2,
-                MinSpend = 250000,                
+                MinSpend = 250000,
                 Deposit = 120000
             });
         }
@@ -68,7 +73,7 @@ public static class DbSeeder
             {
                 Number = i,
                 Capacity = 6,
-                MinSpend = 300000,      
+                MinSpend = 300000,
                 Deposit = 150000
             });
         }
@@ -93,5 +98,16 @@ public static class DbSeeder
 
         db.Events.AddRange(secretRoom, pacha, jimmyz, neonNights);
         await db.SaveChangesAsync();
+    }
+
+    private static async Task<Guest> GetOrCreateGuestAsync(OnlyClubDbContext db, long telegramId, string name, Role role)
+    {
+        var guest = await db.Guests.FirstOrDefaultAsync(g => g.TelegramId == telegramId);
+        if (guest == null)
+        {
+            guest = new Guest { TelegramId = telegramId, Name = name, Role = role };
+            db.Guests.Add(guest);
+        }
+        return guest;
     }
 }
