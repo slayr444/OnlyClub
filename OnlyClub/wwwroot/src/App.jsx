@@ -7,7 +7,6 @@ export default function App() {
     const [ev, setEv] = useState(null)
     const [bk, setBk] = useState(null)
     const [msg, setMsg] = useState('')
-
     const [theme, setTheme] = useState(localStorage.getItem('app-theme') || 'theme-1')
 
     useEffect(() => {
@@ -29,12 +28,18 @@ export default function App() {
             : tab === 'home' ? <Home open={setEv} />
                 : tab === 'list' ? <GuestList toast={toast} />
                     : tab === 'tick' ? <Bookings open={setBk} toast={toast} />
-                        : <Profile theme={theme} setTheme={setTheme} />    
+                        : <Profile theme={theme} setTheme={setTheme} />
 
     const key = bk ? 'b' + bk.id + bk.status : ev ? 'e' + ev.id : tab
 
     return (
         <>
+            {    }
+            <div className="header-logo">
+                <span className="logo-only">Only</span>
+                <span className="logo-club">Club</span>
+            </div>
+
             <div className="scroll" key={key}>{view}</div>
             <Tabs tab={tab} set={go} />
             <Toast m={msg} />
