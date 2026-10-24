@@ -40,8 +40,9 @@ html, body {
     right: 0;
     height: 64px;
     display: flex;
-    align-items: center;
+    align-items: baseline;       
     justify-content: center;
+    gap: 4px;      
     z-index: 25;
     pointer-events: none;
     background: linear-gradient(to bottom, var(--bg) 40%, transparent 100%);
@@ -49,23 +50,23 @@ html, body {
 }
 
     .header-logo span {
-        font-size: 26px;
         line-height: 1;
     }
 
 .logo-only {
     font-family: var(--serif);
-    font-weight: 600;
+    font-size: 32px;    
+    font-weight: 800;     
     color: var(--fg);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
 }
 
 .logo-club {
     font-family: 'Special Gothic Expanded One', sans-serif;
+    font-size: 26px;     
     color: var(--ac);
-    margin-left: 3px;
     letter-spacing: 0.05em;
-    padding-bottom: 2px;
+    padding-bottom: 1px;       
 }
 
 .orb {
